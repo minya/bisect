@@ -1,0 +1,9 @@
+.vscode
+*.dSYM
+
+*.o
+
+*.log
+
+bisect
+main
