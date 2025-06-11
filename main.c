@@ -3,31 +3,8 @@
 #include <string.h>
 #include <getopt.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <regex.h>
 #include <time.h>
-
-#define PROGRAM_NAME "bisect"
-#define VERSION "1.0.0"
-
-struct search_context_t {
-    time_t target_time;
-    struct timespec seconds_around_target;
-};
-
-regex_t regex_datetime;
-char *regex_pattern = "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}"; // Example regex pattern for datetime
-
-char *time_t_to_string(time_t t) {
-    struct tm *tm_info = localtime(&t);
-    char *buffer = malloc(26);
-    if (buffer) {
-        strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
-    }
-    return buffer;
-}
-
-void bisect(const char *filename, struct search_context_t context);
+#include "bisect.h"
 
 void print_usage(const char *program_name) {
     printf("Usage: %s [OPTIONS] <filename>\n", program_name);
@@ -129,6 +106,7 @@ int main(int argc, char *argv[]) {
     }
 
     struct search_context_t context;
+    tm_target.tm_isdst = -1; // Let mktime determine DST
     context.target_time = mktime(&tm_target);
     context.seconds_around_target.tv_sec = 2;
     bisect(filename, context);
@@ -138,84 +116,3 @@ int main(int argc, char *argv[]) {
 
 time_t find_date_in_buffer(const char *buffer, size_t size);
 
-void bisect(const char *filename, struct search_context_t context) {
-    printf("Bisecting file: %s\n", filename);
-    int fd = open(filename, O_RDONLY);
-    if (fd < 0) {
-        perror("Error opening file");
-        exit(EXIT_FAILURE);
-    }
-    size_t file_size = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
-
-    size_t begin = 0;
-    size_t end = file_size;
-    while (begin < end) {
-      size_t mid = (begin + end) / 2;
-
-      lseek(fd, mid, SEEK_SET);
-      char buffer[256];
-      ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
-      if (bytes_read < 0) {
-          perror("Error reading file");
-          close(fd);
-          exit(EXIT_FAILURE);
-      }
-
-      buffer[bytes_read] = '\0';
-      time_t first_buf_time = find_date_in_buffer(buffer, bytes_read);
-      char *date_str = time_t_to_string(first_buf_time);
-      printf("Checking position %zu: found date %s\n", mid, date_str);
-      if (context.target_time < first_buf_time) {
-          end = mid;
-      } else {
-          begin = mid + 1;
-      }
-    }
-
-    if (begin >= file_size) {
-        printf("No suitable date found in the file.\n");
-        close(fd);
-        return;
-    }
-    lseek(fd, begin, SEEK_SET);
-    char buffer[256];
-    ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
-    if (bytes_read < 0) {
-        perror("Error reading file");
-        close(fd);
-        exit(EXIT_FAILURE);
-    }
-    buffer[bytes_read] = '\0';
-    time_t found_time = find_date_in_buffer(buffer, bytes_read);
-    if (found_time == 0) {
-        printf("No date found in the buffer.\n");
-    } else {
-        printf("Found date: %s", ctime(&found_time));
-    }
-    close(fd);
-
-}
-
-time_t find_date_in_buffer(const char *buffer, size_t size) {
-    int reti;
-
-    time_t found_time = 0;
-    regmatch_t pmatch[1];
-    const char *p = buffer;
-
-    while (p < buffer + size) {
-        reti = regexec(&regex_datetime, p, 1, pmatch, 0);
-        if (reti == 0) {
-            char date_str[20];
-            strncpy(date_str, p + pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so);
-            date_str[pmatch[0].rm_eo - pmatch[0].rm_so] = '\0';
-            struct tm tms;
-            strptime(date_str, "%Y-%m-%d %H:%M:%S", &tms);
-            found_time = mktime(&tms);
-            break;
-        }
-        p += pmatch[0].rm_eo;
-    }
-    return found_time;
-}
