@@ -1,0 +1,53 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build-debug",
+            "type": "shell",
+            "command": "make",
+            "args": ["debug"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"],
+            "detail": "Build debug version with symbols"
+        },
+        {
+            "label": "build-test",
+            "type": "shell",
+            "command": "make",
+            "args": ["test_bisect"],
+            "group": "build",
+            "problemMatcher": ["$gcc"],
+            "detail": "Build test executable"
+        },
+        {
+            "label": "build-release",
+            "type": "shell",
+            "command": "make",
+            "args": ["all"],
+            "group": "build",
+            "problemMatcher": ["$gcc"],
+            "detail": "Build release version"
+        },
+        {
+            "label": "clean",
+            "type": "shell",
+            "command": "make",
+            "args": ["clean"],
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "Clean build artifacts"
+        },
+        {
+            "label": "run-tests",
+            "type": "shell",
+            "command": "make",
+            "args": ["test"],
+            "group": "test",
+            "problemMatcher": [],
+            "detail": "Run unit tests"
+        }
+    ]
+}
