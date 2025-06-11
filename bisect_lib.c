@@ -57,28 +57,36 @@ void bisect(const char *filename, struct search_context_t context) {
     char *target_date_str = time_t_to_string(context.target_time);
     printf("Target date: %s\n", target_date_str);
     while (begin < end) {
-      size_t mid = (begin + end) / 2;
+        size_t mid = (begin + end) / 2;
 
-      lseek(fd, mid, SEEK_SET);
-      char buffer[256];
-      ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
-      if (bytes_read < 0) {
-          perror("Error reading file");
-          close(fd);
-          exit(EXIT_FAILURE);
-      }
+        lseek(fd, mid, SEEK_SET);
+        size_t remaining_size = end - mid;
+        size_t read_size = remaining_size < 1023 ? remaining_size : 1023;
+        char buffer[read_size + 1];
+        ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+        if (bytes_read < 0) {
+            perror("Error reading file");
+            close(fd);
+            exit(EXIT_FAILURE);
+        }
 
-      buffer[bytes_read] = '\0';
-      time_t first_buf_time = find_date_in_buffer(buffer, bytes_read);
-      char *date_str = time_t_to_string(first_buf_time);
-      printf("Checking position %zu: found date %s\n", mid, date_str);
+        buffer[bytes_read] = '\0';
+        time_t first_buf_time = find_date_in_buffer(buffer, bytes_read);
+        char *date_str = time_t_to_string(first_buf_time);
+        printf("Checking position %zu: found date %s\n", mid, date_str);
+        if (first_buf_time == 0) {
+            // No valid date found in this buffer
+            free(date_str);
+            end = mid;
+            continue;
+        }
 
-      if (context.target_time < first_buf_time) {
-          end = mid;
-      } else {
-          begin = mid + 1;
-      }
-      free(date_str);
+        if (context.target_time < first_buf_time) {
+            end = mid;
+        } else {
+            begin = mid + 1;
+        }
+        free(date_str);
     }
 
     if (begin >= file_size) {
@@ -99,7 +107,7 @@ void bisect(const char *filename, struct search_context_t context) {
     if (found_time == 0) {
         printf("No date found in the buffer.\n");
     } else {
-        printf("Found date: %s", ctime(&found_time));
+        printf("Found date: %s", time_t_to_string(found_time));
     }
     close(fd);
 }

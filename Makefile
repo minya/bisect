@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O2 -std=c99
+CFLAGS = -Wall -Wextra -Werror -O0 -std=c99
 TARGET = bisect
 TEST_TARGET = test_bisect
 MAIN_SOURCES = main.c bisect_lib.c

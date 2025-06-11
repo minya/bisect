@@ -78,8 +78,7 @@ int main(int argc, char *argv[]) {
     filename = argv[optind];
 
     char absolute_path[PATH_MAX];
-    realpath(filename, absolute_path);
-    if (absolute_path == NULL) {
+    if (realpath(filename, absolute_path) == NULL) {
         fprintf(stderr, "Error: could not resolve absolute path for '%s'\n", filename);
         exit(EXIT_FAILURE);
     }
