@@ -113,5 +113,3 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
 }
 
-time_t find_date_in_buffer(const char *buffer, size_t size);
-

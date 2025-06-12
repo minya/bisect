@@ -5,6 +5,7 @@
 #include <regex.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <stdbool.h>
 #include "bisect.h"
 
 regex_t regex_datetime;
@@ -19,30 +20,38 @@ char *time_t_to_string(time_t t) {
     return buffer;
 }
 
-time_t find_date_in_buffer(const char *buffer, size_t size) {
+time_t string_to_time_t(const char *str) {
+    struct tm tms;
+    if (strptime(str, "%Y-%m-%d %H:%M:%S", &tms) == NULL) {
+        fprintf(stderr, "Error parsing date string: %s\n", str);
+        return -1;
+    }
+    return mktime(&tms);
+}
+
+int find_date_in_buffer(const char *buffer, size_t size) {
     int reti;
-    time_t found_time = 0;
     regmatch_t pmatch[1];
     const char *p = buffer;
 
     while (p < buffer + size) {
         reti = regexec(&regex_datetime, p, 1, pmatch, 0);
         if (reti == 0) {
-            char date_str[20];
-            strncpy(date_str, p + pmatch[0].rm_so, pmatch[0].rm_eo - pmatch[0].rm_so);
-            date_str[pmatch[0].rm_eo - pmatch[0].rm_so] = '\0';
-            struct tm tms;
-            strptime(date_str, "%Y-%m-%d %H:%M:%S", &tms);
-            found_time = mktime(&tms);
-            break;
+            return pmatch[0].rm_so + (p - buffer);
         }
         p += pmatch[0].rm_eo;
     }
-    return found_time;
+    return -1;
 }
 
+bool less(time_t a, time_t b) {
+    return a < b;
+}
+
+void printout(int fd, size_t position, time_t start_time, time_t end_time);
+
 void bisect(const char *filename, struct search_context_t context) {
-    printf("Bisecting file: %s\n", filename);
+    //printf("Bisecting file: %s\n", filename);
     int fd = open(filename, O_RDONLY);
     if (fd < 0) {
         perror("Error opening file");
@@ -54,9 +63,12 @@ void bisect(const char *filename, struct search_context_t context) {
     size_t begin = 0;
     size_t end = file_size;
 
-    char *target_date_str = time_t_to_string(context.target_time);
-    printf("Target date: %s\n", target_date_str);
+    // char *target_date_str = time_t_to_string(context.target_time);
+    //printf("Target date: %s\n", target_date_str);
     while (begin < end) {
+        if (end - begin <= 4096) {
+            break; // If the range is small enough, stop bisecting
+        }
         size_t mid = (begin + end) / 2;
 
         lseek(fd, mid, SEEK_SET);
@@ -71,43 +83,85 @@ void bisect(const char *filename, struct search_context_t context) {
         }
 
         buffer[bytes_read] = '\0';
-        time_t first_buf_time = find_date_in_buffer(buffer, bytes_read);
-        char *date_str = time_t_to_string(first_buf_time);
-        printf("Checking position %zu: found date %s\n", mid, date_str);
-        if (first_buf_time == 0) {
+        int date_offset_in_buf = find_date_in_buffer(buffer, bytes_read);
+        if (date_offset_in_buf < 0) {
             // No valid date found in this buffer
-            free(date_str);
             end = mid;
             continue;
         }
 
-        if (context.target_time < first_buf_time) {
+        char date_str[20];
+        strncpy(date_str, buffer + date_offset_in_buf, 20);
+        date_str[19] = '\0';
+        struct tm tms;
+        strptime(date_str, "%Y-%m-%d %H:%M:%S", &tms);
+        time_t found_time = mktime(&tms);
+        // char *date_str = time_t_to_string(first_buf_time);
+        //printf("Checking position %zu: found date %s\n", mid, date_str);
+
+        if (less(context.target_time, found_time)) {
             end = mid;
         } else {
             begin = mid + 1;
         }
-        free(date_str);
     }
 
     if (begin >= file_size) {
-        printf("No suitable date found in the file.\n");
+        // printf("No suitable date found in the file.\n");
         close(fd);
         return;
     }
-    lseek(fd, begin, SEEK_SET);
-    char buffer[256];
-    ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
-    if (bytes_read < 0) {
-        perror("Error reading file");
-        close(fd);
-        exit(EXIT_FAILURE);
-    }
-    buffer[bytes_read] = '\0';
-    time_t found_time = find_date_in_buffer(buffer, bytes_read);
-    if (found_time == 0) {
-        printf("No date found in the buffer.\n");
-    } else {
-        printf("Found date: %s", time_t_to_string(found_time));
-    }
+
+    printout(fd, begin, context.target_time, context.target_time + context.seconds_around_target.tv_sec);
     close(fd);
+}
+
+void printout(int fd, size_t position, time_t start_time, time_t end_time) {
+    lseek(fd, position, SEEK_SET);
+    char buffer[1025];
+
+    size_t pos_to_print_from = SIZE_MAX;
+    while (true)
+    {
+        size_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+        if (bytes_read < 0) {
+            perror("Error reading file");
+            return;
+        }
+        if (bytes_read == 0) {
+            break; // End of file reached
+        }
+        buffer[bytes_read] = '\0';
+
+
+        char *buf_ptr = buffer;
+        while (buf_ptr < buffer + bytes_read) {
+            int found_time = find_date_in_buffer(buf_ptr, bytes_read);
+            if (found_time < 0) {
+                if (pos_to_print_from != SIZE_MAX) {
+                    write(STDOUT_FILENO, buffer + pos_to_print_from, bytes_read - pos_to_print_from);
+                    pos_to_print_from = 0;
+                }
+                buf_ptr += bytes_read; // Move to the end of the buffer
+                continue;
+            }
+
+            if (pos_to_print_from != SIZE_MAX) {
+                write(STDOUT_FILENO, buffer + pos_to_print_from, buf_ptr - buffer + found_time - pos_to_print_from);
+                pos_to_print_from = SIZE_MAX;
+            }
+
+            time_t found_time_value = string_to_time_t(buf_ptr + found_time);
+            if (found_time_value < start_time) {
+                buf_ptr += found_time + 20;
+                continue;
+            } else if (found_time_value > end_time) {
+                return;
+            } else {
+                pos_to_print_from = (buf_ptr - buffer) + found_time;
+                buf_ptr += found_time + 20;
+            }
+        }
+    }
+    
 }
