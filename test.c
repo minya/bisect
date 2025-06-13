@@ -49,18 +49,23 @@ void test_find_date_in_buffer() {
     
     // Test with valid date
     const char *buffer1 = "2025-06-02 11:55:34 Some log message";
-    time_t result1 = find_date_in_buffer(buffer1, strlen(buffer1));
-    test_assert(result1 != 0, "find_date_in_buffer finds valid date");
+    int result1 = find_date_in_buffer(buffer1, strlen(buffer1));
+    test_assert(result1 == 0, "find_date_in_buffer finds valid date at position 0");
     
     // Test with no date
     const char *buffer2 = "No date in this buffer";
-    time_t result2 = find_date_in_buffer(buffer2, strlen(buffer2));
-    test_assert(result2 == 0, "find_date_in_buffer returns 0 for no date");
+    int result2 = find_date_in_buffer(buffer2, strlen(buffer2));
+    test_assert(result2 == -1, "find_date_in_buffer returns -1 for no date");
     
     // Test with multiple dates (should find first one)
     const char *buffer3 = "2025-06-02 11:55:34 First date 2025-06-02 12:00:00 Second date";
-    time_t result3 = find_date_in_buffer(buffer3, strlen(buffer3));
-    test_assert(result3 != 0, "find_date_in_buffer finds first date in buffer with multiple dates");
+    int result3 = find_date_in_buffer(buffer3, strlen(buffer3));
+    test_assert(result3 == 0, "find_date_in_buffer finds first date at position 0");
+    
+    // Test with date not at beginning
+    const char *buffer4 = "Some text 2025-06-02 11:55:34 Some log message";
+    int result4 = find_date_in_buffer(buffer4, strlen(buffer4));
+    test_assert(result4 == 10, "find_date_in_buffer finds date at correct position");
     
     regfree(&regex_datetime);
 }
