@@ -5,6 +5,11 @@
 *.log
 *.gz
 
+
 # executables 
 bisect
 test_bisect
+*.exe
+
+# visual studio files
+.vs/

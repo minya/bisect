@@ -1,9 +1,13 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror -O3 -std=c99
+LDFLAGS =
+ifeq ($(OS), Windows_NT)
+LDFLAGS += -lregex
+endif
 TARGET = bisect
 TEST_TARGET = test_bisect
-MAIN_SOURCES = main.c bisect_lib.c search_range.c
-LIB_SOURCES = bisect_lib.c
+MAIN_SOURCES = main.c bisect_lib.c search_range.c win.c
+LIB_SOURCES = bisect_lib.c win.c
 TEST_SOURCES = test.c search_range.c
 MAIN_OBJECTS = $(MAIN_SOURCES:.c=.o)
 LIB_OBJECTS = $(LIB_SOURCES:.c=.o)
@@ -14,10 +18,10 @@ TEST_OBJECTS = $(TEST_SOURCES:.c=.o)
 all: $(TARGET)
 
 $(TARGET): $(MAIN_OBJECTS)
-	$(CC) $(MAIN_OBJECTS) -o $(TARGET)
+	$(CC) $(MAIN_OBJECTS) $(LDFLAGS) -o $(TARGET)
 
 $(TEST_TARGET): $(TEST_OBJECTS) $(LIB_OBJECTS)
-	$(CC) $(TEST_OBJECTS) $(LIB_OBJECTS) -o $(TEST_TARGET)
+	$(CC) $(TEST_OBJECTS) $(LIB_OBJECTS) $(LDFLAGS) -o $(TEST_TARGET)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@

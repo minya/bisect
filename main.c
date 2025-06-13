@@ -4,8 +4,12 @@
 #include <getopt.h>
 #include <unistd.h>
 #include <time.h>
-
+#include <regex.h>
 #include "bisect.h"
+
+#if defined(_WIN32) || defined(_WIN64)
+#include "win.h"
+#endif
 
 void print_usage(const char *program_name) {
     printf("Usage: %s [OPTIONS] <filename>\n", program_name);
