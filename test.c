@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include "bisect.h"
+#include "search_range.h"
 
 int test_count = 0;
 int test_passed = 0;
@@ -88,12 +89,59 @@ void test_create_sample_file() {
     unlink(filename);
 }
 
+void test_parse_time_range() {
+    struct search_range_t range;
+    
+    // Test basic date parsing
+    test_assert(parse_time_range("2025-06-02 11:55:34", &range) == 0, "parse_time_range parses basic date");
+    test_assert(range.start == range.end, "parse_time_range sets equal start/end for basic date");
+    
+    // Test NULL inputs
+    test_assert(parse_time_range(NULL, &range) == -1, "parse_time_range handles NULL time_str");
+    test_assert(parse_time_range("2025-06-02 11:55:34", NULL) == -1, "parse_time_range handles NULL range");
+    
+    // Test invalid date format
+    test_assert(parse_time_range("invalid-date", &range) == -1, "parse_time_range rejects invalid date format");
+    test_assert(parse_time_range("2025-13-40 25:70:80", &range) == -1, "parse_time_range rejects invalid date values");
+    
+    // Test + operand with seconds
+    test_assert(parse_time_range("2025-06-02 11:55:34+30s", &range) == 0, "parse_time_range handles +30s");
+    test_assert(range.end == range.start + 30, "parse_time_range correctly adds 30 seconds");
+    
+    // Test - operand with minutes
+    test_assert(parse_time_range("2025-06-02 11:55:34-15m", &range) == 0, "parse_time_range handles -15m");
+    test_assert(range.start == range.end - (15 * 60), "parse_time_range correctly subtracts 15 minutes");
+    
+    // Test ~ operand with hours
+    test_assert(parse_time_range("2025-06-02 11:55:34~2h", &range) == 0, "parse_time_range handles ~2h");
+    time_t original_time = range.start + (2 * 3600);
+    test_assert(range.start == original_time - (2 * 3600), "parse_time_range correctly sets start for ~2h");
+    test_assert(range.end == original_time + (2 * 3600), "parse_time_range correctly sets end for ~2h");
+    
+    // Test days
+    test_assert(parse_time_range("2025-06-02 11:55:34+1d", &range) == 0, "parse_time_range handles +1d");
+    test_assert(range.end == range.start + 86400, "parse_time_range correctly adds 1 day");
+    
+    // Test invalid operands
+    test_assert(parse_time_range("2025-06-02 11:55:34*30s", &range) == -1, "parse_time_range rejects invalid operand");
+    test_assert(parse_time_range("2025-06-02 11:55:34&30s", &range) == -1, "parse_time_range rejects invalid operand");
+    
+    // Test invalid units
+    test_assert(parse_time_range("2025-06-02 11:55:34+30x", &range) == -1, "parse_time_range rejects invalid unit");
+    test_assert(parse_time_range("2025-06-02 11:55:34+30", &range) == -1, "parse_time_range rejects missing unit");
+    
+    // Test edge cases
+    test_assert(parse_time_range("2025-06-02 11:55:34+0s", &range) == 0, "parse_time_range handles +0s");
+    test_assert(range.end == range.start, "parse_time_range correctly handles zero offset");
+}
+
 int main() {
     printf("Running unit tests...\n\n");
     
     test_time_t_to_string();
     test_find_date_in_buffer();
     test_create_sample_file();
+    test_parse_time_range();
     
     printf("\n=== Test Results ===\n");
     printf("Tests run: %d\n", test_count);

@@ -4,7 +4,7 @@ TARGET = bisect
 TEST_TARGET = test_bisect
 MAIN_SOURCES = main.c bisect_lib.c search_range.c
 LIB_SOURCES = bisect_lib.c
-TEST_SOURCES = test.c
+TEST_SOURCES = test.c search_range.c
 MAIN_OBJECTS = $(MAIN_SOURCES:.c=.o)
 LIB_OBJECTS = $(LIB_SOURCES:.c=.o)
 TEST_OBJECTS = $(TEST_SOURCES:.c=.o)
