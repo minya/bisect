@@ -54,7 +54,7 @@ bool less(time_t a, time_t b) {
 
 void printout(int fd, size_t position, time_t start_time, time_t end_time);
 
-void bisect(const char *filename, struct search_range_t context) {
+void bisect(const char *filename, struct search_range_t range) {
     int fd = open(filename, O_RDONLY);
     if (fd < 0) {
         perror("Error opening file");
@@ -97,7 +97,7 @@ void bisect(const char *filename, struct search_range_t context) {
         strptime(date_str, "%Y-%m-%d %H:%M:%S", &tms);
         time_t found_time = mktime(&tms);
 
-        if (less(context.start, found_time)) {
+        if (less(range.start, found_time)) {
             end = mid;
         } else {
             begin = mid + 1;
@@ -109,7 +109,7 @@ void bisect(const char *filename, struct search_range_t context) {
         return;
     }
 
-    printout(fd, begin, context.start, context.end);
+    printout(fd, begin, range.start, range.end);
     close(fd);
 }
 
