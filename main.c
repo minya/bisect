@@ -4,6 +4,7 @@
 #include <getopt.h>
 #include <unistd.h>
 #include <time.h>
+
 #include "bisect.h"
 
 void print_usage(const char *program_name) {
@@ -14,7 +15,7 @@ void print_usage(const char *program_name) {
     printf("Options:\n");
     printf("  -h, --help     Show this help message\n");
     printf("  -v, --version  Show version information\n");
-    printf("  -t, --time     Target timestamp (YYYY-MM-DD HH:MM:SS)\n");
+    printf("  -t, --time     Target time (YYYY-MM-DD HH:MM:SS)\n");
     printf("  -V, --verbose  Enable verbose output\n");
 }
 
@@ -30,7 +31,7 @@ int main(int argc, char *argv[]) {
 
     int opt;
     int verbose = 0;
-    char *timestamp = NULL;
+    char *time = NULL;
     char *filename = NULL;
     
     static struct option long_options[] = {
@@ -50,7 +51,7 @@ int main(int argc, char *argv[]) {
                 print_version();
                 exit(EXIT_SUCCESS);
             case 't':
-                timestamp = optarg;
+                time = optarg;
                 break;
             case 'V':
                 verbose = 1;
@@ -63,8 +64,8 @@ int main(int argc, char *argv[]) {
         }
     }
     
-    if (timestamp == NULL) {
-        fprintf(stderr, "Error: timestamp argument required (-t or --time)\n");
+    if (time == NULL) {
+        fprintf(stderr, "Error: time argument required (-t or --time)\n");
         fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
         exit(EXIT_FAILURE);
     }
@@ -92,23 +93,18 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    struct tm tm_target = {0};
-    if (strptime(timestamp, "%Y-%m-%d %H:%M:%S", &tm_target) == NULL) {
-        fprintf(stderr, "Error: invalid timestamp format. Use YYYY-MM-DD HH:MM:SS\n");
-        exit(EXIT_FAILURE);
-    }
-    
     if (verbose) {
         printf("Verbose mode enabled\n");
-        printf("Target timestamp: %s\n", timestamp);
+        printf("Target time: %s\n", time);
         printf("Processing file: %s\n", filename);
     }
 
-    struct search_context_t context;
-    tm_target.tm_isdst = -1; // Let mktime determine DST
-    context.target_time = mktime(&tm_target);
-    context.seconds_around_target.tv_sec = 2;
-    bisect(filename, context);
+    struct search_range_t range;
+    if (parse_time_range(time, &range) != 0) {
+        fprintf(stderr, "Error: invalid time format '%s'. Expected format: YYYY-MM-DD HH:MM:SS\n", time);
+        exit(EXIT_FAILURE);
+    }
+    bisect(filename, range);
     
     return EXIT_SUCCESS;
 }

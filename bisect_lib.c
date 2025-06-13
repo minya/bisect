@@ -6,10 +6,14 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdbool.h>
+
 #include "bisect.h"
+#include "search_range.h"
 
 regex_t regex_datetime;
 char *regex_pattern = "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}";
+
+size_t date_str_len = 19; // "YYYY-MM-DD HH:MM:SS"
 
 char *time_t_to_string(time_t t) {
     struct tm *tm_info = localtime(&t);
@@ -50,8 +54,7 @@ bool less(time_t a, time_t b) {
 
 void printout(int fd, size_t position, time_t start_time, time_t end_time);
 
-void bisect(const char *filename, struct search_context_t context) {
-    //printf("Bisecting file: %s\n", filename);
+void bisect(const char *filename, struct search_range_t context) {
     int fd = open(filename, O_RDONLY);
     if (fd < 0) {
         perror("Error opening file");
@@ -63,8 +66,6 @@ void bisect(const char *filename, struct search_context_t context) {
     size_t begin = 0;
     size_t end = file_size;
 
-    // char *target_date_str = time_t_to_string(context.target_time);
-    //printf("Target date: %s\n", target_date_str);
     while (begin < end) {
         if (end - begin <= 4096) {
             break; // If the range is small enough, stop bisecting
@@ -85,7 +86,6 @@ void bisect(const char *filename, struct search_context_t context) {
         buffer[bytes_read] = '\0';
         int date_offset_in_buf = find_date_in_buffer(buffer, bytes_read);
         if (date_offset_in_buf < 0) {
-            // No valid date found in this buffer
             end = mid;
             continue;
         }
@@ -96,10 +96,8 @@ void bisect(const char *filename, struct search_context_t context) {
         struct tm tms;
         strptime(date_str, "%Y-%m-%d %H:%M:%S", &tms);
         time_t found_time = mktime(&tms);
-        // char *date_str = time_t_to_string(first_buf_time);
-        //printf("Checking position %zu: found date %s\n", mid, date_str);
 
-        if (less(context.target_time, found_time)) {
+        if (less(context.start, found_time)) {
             end = mid;
         } else {
             begin = mid + 1;
@@ -107,12 +105,11 @@ void bisect(const char *filename, struct search_context_t context) {
     }
 
     if (begin >= file_size) {
-        // printf("No suitable date found in the file.\n");
         close(fd);
         return;
     }
 
-    printout(fd, begin, context.target_time, context.target_time + context.seconds_around_target.tv_sec);
+    printout(fd, begin, context.start, context.end);
     close(fd);
 }
 

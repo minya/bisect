@@ -1,8 +1,8 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -O0 -std=c99
+CFLAGS = -Wall -Wextra -Werror -O3 -std=c99
 TARGET = bisect
 TEST_TARGET = test_bisect
-MAIN_SOURCES = main.c bisect_lib.c
+MAIN_SOURCES = main.c bisect_lib.c search_range.c
 LIB_SOURCES = bisect_lib.c
 TEST_SOURCES = test.c
 MAIN_OBJECTS = $(MAIN_SOURCES:.c=.o)
