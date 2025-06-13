@@ -2,6 +2,9 @@
 #include <string.h>
 #include <stdbool.h>
 #include "search_range.h"
+#ifdef _WIN32
+#include "win.h"
+#endif
 
 
 bool is_valid_operand(char operand) {

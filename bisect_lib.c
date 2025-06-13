@@ -10,6 +10,10 @@
 #include "bisect.h"
 #include "search_range.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+#include "win.h"
+#endif
+
 regex_t regex_datetime;
 char *regex_pattern = "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}";
 
@@ -76,7 +80,7 @@ void bisect(const char *filename, struct search_range_t range) {
         size_t remaining_size = end - mid;
         size_t read_size = remaining_size < 1023 ? remaining_size : 1023;
         char buffer[read_size + 1];
-        ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+        int bytes_read = read(fd, buffer, sizeof(buffer) - 1);
         if (bytes_read < 0) {
             perror("Error reading file");
             close(fd);
@@ -120,7 +124,7 @@ void printout(int fd, size_t position, time_t start_time, time_t end_time) {
     size_t pos_to_print_from = SIZE_MAX;
     while (true)
     {
-        size_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+        int bytes_read = read(fd, buffer, sizeof(buffer) - 1);
         if (bytes_read < 0) {
             perror("Error reading file");
             return;
