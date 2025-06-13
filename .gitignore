@@ -3,6 +3,7 @@
 *.o
 
 *.log
+*.gz
 
 # executables 
 bisect

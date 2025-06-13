@@ -1,5 +1,14 @@
 {
   "files.associations": {
     "*.h": "c",
+  },
+  "files.exclude": {
+    "*.dSYM/": true,
+    "**/.DS_Store": true,
+    "*.o": true,
+    "bisect": true,
+    "bisect_test": true,
+    "*.log": true,
+    "*.gz": true,
   }
 }
