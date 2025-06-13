@@ -4,5 +4,6 @@
 
 *.log
 
+# executables 
 bisect
-main
+test_bisect
