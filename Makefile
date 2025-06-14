@@ -1,6 +1,9 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror -O3 -std=c99
-LDFLAGS = -lregex
+LDFLAGS =
+ifdef _WIN32
+LDFLAGS = $(LDFLAGS) -lregex
+endif
 TARGET = bisect
 TEST_TARGET = test_bisect
 MAIN_SOURCES = main.c bisect_lib.c search_range.c win.c
