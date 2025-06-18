@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -O3 -std=c99
+CFLAGS = -Wall -Wextra -Werror -O3 -std=c11 -D_XOPEN_SOURCE=1
 LDFLAGS =
 ifeq ($(OS), Windows_NT)
 LDFLAGS += -lregex

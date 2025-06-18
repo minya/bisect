@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "bisect.h"
 #include "search_range.h"
@@ -140,7 +141,10 @@ void printout(int fd, size_t position, time_t start_time, time_t end_time) {
             int found_time = find_date_in_buffer(buf_ptr, bytes_read);
             if (found_time < 0) {
                 if (pos_to_print_from != SIZE_MAX) {
-                    write(STDOUT_FILENO, buffer + pos_to_print_from, bytes_read - pos_to_print_from);
+                    if (write(STDOUT_FILENO, buffer + pos_to_print_from, bytes_read - pos_to_print_from) < 0) {
+                        perror("Error writing to stdout");
+                        return;
+                    }
                     pos_to_print_from = 0;
                 }
                 buf_ptr += bytes_read; // Move to the end of the buffer
@@ -148,7 +152,11 @@ void printout(int fd, size_t position, time_t start_time, time_t end_time) {
             }
 
             if (pos_to_print_from != SIZE_MAX) {
-                write(STDOUT_FILENO, buffer + pos_to_print_from, buf_ptr - buffer + found_time - pos_to_print_from);
+                if (write(STDOUT_FILENO, buffer + pos_to_print_from, buf_ptr - buffer + found_time - pos_to_print_from) < 0) {
+                    perror("Error writing to stdout");
+                    return;
+                }
+                
                 pos_to_print_from = SIZE_MAX;
             }
 
