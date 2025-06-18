@@ -20,7 +20,7 @@ void print_usage(const char *program_name) {
     printf("Options:\n");
     printf("  -h, --help     Show this help message\n");
     printf("  -v, --version  Show version information\n");
-    printf("  -t, --time     Target time (YYYY-MM-DD HH:MM:SS)\n");
+    printf("  -t, --time     Target time range (YYYY-MM-DD HH:MM:SS[+|-|~]<number><unit>)\n");
     printf("  -V, --verbose  Enable verbose output\n");
 }
 
@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
 
     struct search_range_t range;
     if (parse_time_range(time, &range) != 0) {
-        fprintf(stderr, "Error: invalid time format '%s'. Expected format: YYYY-MM-DD HH:MM:SS\n", time);
+        fprintf(stderr, "Error: invalid time format '%s'. Expected format: YYYY-MM-DD HH:MM:SS[+|-|~]<number><unit>\n", time);
         exit(EXIT_FAILURE);
     }
     bisect(filename, range);
