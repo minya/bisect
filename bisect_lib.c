@@ -122,10 +122,10 @@ void printout(int fd, size_t position, time_t start_time, time_t end_time) {
     lseek(fd, position, SEEK_SET);
     char buffer[1025];
 
-    size_t pos_to_print_from = SIZE_MAX;
     while (true)
     {
         int bytes_read = read(fd, buffer, sizeof(buffer) - 1);
+        printf("BYTES_READ: %d\n", bytes_read);
         if (bytes_read < 0) {
             perror("Error reading file");
             return;
@@ -136,24 +136,35 @@ void printout(int fd, size_t position, time_t start_time, time_t end_time) {
         buffer[bytes_read] = '\0';
 
 
+        size_t pos_to_print_from = SIZE_MAX;
         char *buf_ptr = buffer;
         while (buf_ptr < buffer + bytes_read) {
-            int found_time = find_date_in_buffer(buf_ptr, bytes_read);
+            printf("buf_ptr: %p, buffer: %p, buf_ptr-buffer:%ld bytes_read: %d\n", (void *)buf_ptr, (void *)buffer, buf_ptr-buffer, bytes_read);
+
+            int found_time = find_date_in_buffer(buf_ptr, bytes_read - (buf_ptr - buffer));
+
             if (found_time < 0) {
                 if (pos_to_print_from != SIZE_MAX) {
                     if (write(STDOUT_FILENO, buffer + pos_to_print_from, bytes_read - pos_to_print_from) < 0) {
-                        perror("Error writing to stdout");
+                        perror("(1) Error writing to stdout");
                         return;
                     }
-                    pos_to_print_from = 0;
+                    pos_to_print_from = SIZE_MAX;
                 }
-                buf_ptr += bytes_read; // Move to the end of the buffer
+                buf_ptr += bytes_read - (buf_ptr - buffer);
                 continue;
             }
 
             if (pos_to_print_from != SIZE_MAX) {
-                if (write(STDOUT_FILENO, buffer + pos_to_print_from, buf_ptr - buffer + found_time - pos_to_print_from) < 0) {
-                    perror("Error writing to stdout");
+                size_t pos_to_print_to = (buf_ptr - buffer) + found_time;
+                int n_bytes_to_print = pos_to_print_to - pos_to_print_from;
+                if (write(STDOUT_FILENO, buffer + pos_to_print_from, n_bytes_to_print) < 0) {
+                    perror("(2) Error writing to stdout");
+                    printf("pos_to_print_from: %zu\n", pos_to_print_from);
+                    printf("bytes_read: %d\n", bytes_read);
+                    printf("n_bytes_to_print: %d\n", n_bytes_to_print);
+                    printf("found_time: %d\n", found_time);
+                    printf("buf_ptr - buffer: %ld\n", (buf_ptr - buffer));
                     return;
                 }
                 
@@ -162,13 +173,12 @@ void printout(int fd, size_t position, time_t start_time, time_t end_time) {
 
             time_t found_time_value = string_to_time_t(buf_ptr + found_time);
             if (found_time_value < start_time) {
-                buf_ptr += found_time + 20;
-                continue;
+                buf_ptr += found_time + 19;
             } else if (found_time_value > end_time) {
                 return;
             } else {
                 pos_to_print_from = (buf_ptr - buffer) + found_time;
-                buf_ptr += found_time + 20;
+                buf_ptr += found_time + 19;
             }
         }
     }
