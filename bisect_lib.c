@@ -120,12 +120,16 @@ void bisect(const char *filename, struct search_range_t range) {
 
 void printout(int fd, size_t position, time_t start_time, time_t end_time) {
     lseek(fd, position, SEEK_SET);
-    char buffer[1025];
-
+    // Large enough buffer to read multiple lines.
+    // Needs to be replaced by a list of buffers or become dynamic as we do not know how large the lines are.
+    const size_t BUFSIZE = 8192;
+    char buffer[BUFSIZE+1]; // + 1 for null terminator
+    size_t remaining_bytes = 0;
+    size_t pos_to_print_from = SIZE_MAX;
     while (true)
     {
-        int bytes_read = read(fd, buffer, sizeof(buffer) - 1);
-        printf("BYTES_READ: %d\n", bytes_read);
+        int bytes_read = read(fd, buffer + remaining_bytes, sizeof(buffer) - 1 - remaining_bytes);
+        // printf("BYTES_READ: %d from offset: %zu\n", bytes_read, remaining_bytes);
         if (bytes_read < 0) {
             perror("Error reading file");
             return;
@@ -133,26 +137,25 @@ void printout(int fd, size_t position, time_t start_time, time_t end_time) {
         if (bytes_read == 0) {
             break; // End of file reached
         }
-        buffer[bytes_read] = '\0';
+        buffer[bytes_read + remaining_bytes] = '\0';
+        size_t total_bytes_read = bytes_read + remaining_bytes;
+        remaining_bytes += 0;
 
-
-        size_t pos_to_print_from = SIZE_MAX;
         char *buf_ptr = buffer;
-        while (buf_ptr < buffer + bytes_read) {
-            printf("buf_ptr: %p, buffer: %p, buf_ptr-buffer:%ld bytes_read: %d\n", (void *)buf_ptr, (void *)buffer, buf_ptr-buffer, bytes_read);
-
-            int found_time = find_date_in_buffer(buf_ptr, bytes_read - (buf_ptr - buffer));
+        while (buf_ptr < buffer + total_bytes_read) {
+            int found_time = find_date_in_buffer(buf_ptr, total_bytes_read - (buf_ptr - buffer));
 
             if (found_time < 0) {
+                size_t copy_from = buf_ptr - buffer;
                 if (pos_to_print_from != SIZE_MAX) {
-                    if (write(STDOUT_FILENO, buffer + pos_to_print_from, bytes_read - pos_to_print_from) < 0) {
-                        perror("(1) Error writing to stdout");
-                        return;
-                    }
-                    pos_to_print_from = SIZE_MAX;
+                    // If we have a position to print from, we need to copy that part to the beginning of the buffer
+                    copy_from = pos_to_print_from;
+                    pos_to_print_from = 0;
                 }
-                buf_ptr += bytes_read - (buf_ptr - buffer);
-                continue;
+                memmove(buffer, buffer + copy_from, total_bytes_read - copy_from);
+                remaining_bytes = total_bytes_read - copy_from;
+
+                break;
             }
 
             if (pos_to_print_from != SIZE_MAX) {
@@ -160,11 +163,11 @@ void printout(int fd, size_t position, time_t start_time, time_t end_time) {
                 int n_bytes_to_print = pos_to_print_to - pos_to_print_from;
                 if (write(STDOUT_FILENO, buffer + pos_to_print_from, n_bytes_to_print) < 0) {
                     perror("(2) Error writing to stdout");
-                    printf("pos_to_print_from: %zu\n", pos_to_print_from);
-                    printf("bytes_read: %d\n", bytes_read);
-                    printf("n_bytes_to_print: %d\n", n_bytes_to_print);
-                    printf("found_time: %d\n", found_time);
-                    printf("buf_ptr - buffer: %ld\n", (buf_ptr - buffer));
+                    // printf("pos_to_print_from: %zu\n", pos_to_print_from);
+                    // printf("total_bytes_read: %zu\n", total_bytes_read);
+                    // printf("n_bytes_to_print: %d\n", n_bytes_to_print);
+                    // printf("found_time: %d\n", found_time);
+                    // printf("buf_ptr - buffer: %ld\n", (buf_ptr - buffer));
                     return;
                 }
                 
@@ -182,5 +185,10 @@ void printout(int fd, size_t position, time_t start_time, time_t end_time) {
             }
         }
     }
-    
+
+    if (pos_to_print_from != SIZE_MAX) {
+        if (write(STDOUT_FILENO, buffer + pos_to_print_from, remaining_bytes - pos_to_print_from) < 0) {
+            perror("(3) Error writing to stdout");
+        }
+    }
 }
