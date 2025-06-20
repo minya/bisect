@@ -18,7 +18,7 @@ extern regex_t regex_datetime;
 extern char *regex_pattern;
 
 char *time_t_to_string(time_t t);
-int find_date_in_buffer(const char *buffer, size_t size);
+int find_date_in_buffer(const char *buffer);
 void bisect(const char *filename, struct search_range_t range);
 void print_usage(const char *program_name);
 void print_version(void);

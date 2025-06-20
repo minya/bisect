@@ -38,17 +38,13 @@ time_t string_to_time_t(const char *str) {
     return mktime(&tms);
 }
 
-int find_date_in_buffer(const char *buffer, size_t size) {
+int find_date_in_buffer(const char *buffer) {
     int reti;
     regmatch_t pmatch[1];
-    const char *p = buffer;
 
-    while (p < buffer + size) {
-        reti = regexec(&regex_datetime, p, 1, pmatch, 0);
-        if (reti == 0) {
-            return pmatch[0].rm_so + (p - buffer);
-        }
-        p += pmatch[0].rm_eo;
+    reti = regexec(&regex_datetime, buffer, 1, pmatch, 0);
+    if (reti == 0) {
+        return pmatch[0].rm_so;
     }
     return -1;
 }
@@ -89,7 +85,7 @@ void bisect(const char *filename, struct search_range_t range) {
         }
 
         buffer[bytes_read] = '\0';
-        int date_offset_in_buf = find_date_in_buffer(buffer, bytes_read);
+        int date_offset_in_buf = find_date_in_buffer(buffer);
         if (date_offset_in_buf < 0) {
             end = mid;
             continue;
@@ -139,11 +135,11 @@ void printout(int fd, size_t position, time_t start_time, time_t end_time) {
         }
         buffer[bytes_read + remaining_bytes] = '\0';
         size_t total_bytes_read = bytes_read + remaining_bytes;
-        remaining_bytes += 0;
+        remaining_bytes = 0;
 
         char *buf_ptr = buffer;
         while (buf_ptr < buffer + total_bytes_read) {
-            int found_time = find_date_in_buffer(buf_ptr, total_bytes_read - (buf_ptr - buffer));
+            int found_time = find_date_in_buffer(buf_ptr);
 
             if (found_time < 0) {
                 size_t copy_from = buf_ptr - buffer;
