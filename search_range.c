@@ -15,7 +15,7 @@ bool is_valid_offset_unit(char unit) {
     return unit == 's' || unit == 'm' || unit == 'h' || unit == 'd';
 }
 
-int parse_time_range(const char *time_str, struct search_range_t *range) {
+int parse_search_range(const char *time_str, struct search_range_t *range) {
     if (time_str == NULL || range == NULL) {
         return -1;
     }

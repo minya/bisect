@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
     }
 
     struct search_range_t range;
-    if (parse_time_range(time, &range) != 0) {
+    if (parse_search_range(time, &range) != 0) {
         fprintf(stderr, "Error: invalid time format '%s'. Expected format: YYYY-MM-DD HH:MM:SS[+|-|~]<number><unit>\n", time);
         exit(EXIT_FAILURE);
     }

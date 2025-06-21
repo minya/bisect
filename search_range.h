@@ -11,6 +11,6 @@ struct search_range_t {
 
 extern size_t date_str_len; // "YYYY-MM-DD HH:MM:SS"
 
-int parse_time_range(const char *time_str, struct search_range_t *range);
+int parse_search_range(const char *time_str, struct search_range_t *range);
 
 #endif // SEARCH_RANGE_H
