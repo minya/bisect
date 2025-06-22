@@ -53,7 +53,7 @@ bool less(time_t a, time_t b) {
     return a < b;
 }
 
-void printout(int fd, size_t position, time_t start_time, time_t end_time);
+void printout(int fd, size_t position, size_t stop, time_t start_time, time_t end_time);
 
 void bisect(const char *filename, struct search_range_t range) {
     int fd = open(filename, O_RDONLY);
@@ -110,11 +110,11 @@ void bisect(const char *filename, struct search_range_t range) {
         return;
     }
 
-    printout(fd, begin, range.start, range.end);
+    printout(fd, begin, end, range.start, range.end);
     close(fd);
 }
 
-void printout(int fd, size_t position, time_t start_time, time_t end_time) {
+void printout(int fd, size_t position, size_t stop, time_t start_time, time_t end_time) {
     lseek(fd, position, SEEK_SET);
     // Large enough buffer to read multiple lines.
     // Needs to be replaced by a list of buffers or become dynamic as we do not know how large the lines are.
@@ -122,8 +122,13 @@ void printout(int fd, size_t position, time_t start_time, time_t end_time) {
     char buffer[BUFSIZE+1]; // + 1 for null terminator
     size_t remaining_bytes = 0;
     size_t pos_to_print_from = SIZE_MAX;
+    size_t n_read = 0;
     while (true)
     {
+        if (n_read >= stop) {
+            break; // Stop reading if we have reached the end position
+        }
+
         int bytes_read = read(fd, buffer + remaining_bytes, sizeof(buffer) - 1 - remaining_bytes);
         // printf("BYTES_READ: %d from offset: %zu\n", bytes_read, remaining_bytes);
         if (bytes_read < 0) {
@@ -133,6 +138,9 @@ void printout(int fd, size_t position, time_t start_time, time_t end_time) {
         if (bytes_read == 0) {
             break; // End of file reached
         }
+
+        n_read += bytes_read;
+
         buffer[bytes_read + remaining_bytes] = '\0';
         size_t total_bytes_read = bytes_read + remaining_bytes;
         remaining_bytes = 0;
