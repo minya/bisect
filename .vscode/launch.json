@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/bisect",
             "args": [
-                "-t", "2025-06-02 11:55:55",
+                "-t", "2025-06-02 11:49:49~1s",
                 "-V",
                 "sample_big_log.log"
             ],
