@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include "time_types.h"
 #include "search_range.h"
 #ifdef _WIN32
 #include "win.h"
@@ -23,28 +24,59 @@ int parse_search_range(const char *time_str, struct search_range_t *range) {
     size_t time_str_len = strlen(time_str);
 
     struct tm tm_target = {0};
-    if (strptime(time_str, "%Y-%m-%d %H:%M:%S", &tm_target) == NULL) {
+    char *end_ptr = strptime(time_str, "%Y-%m-%d %H:%M:%S", &tm_target);
+    if (end_ptr == NULL) {
         return -1;
     }
 
     tm_target.tm_isdst = -1; // Let mktime determine DST
-    range->start = mktime(&tm_target);
-    range->end = mktime(&tm_target);
+    time_t base_time = mktime(&tm_target);
+    
+    // Initialize range with base time
+    range->start.seconds = base_time;
+    range->start.nanoseconds = 0;
+    range->end.seconds = base_time;
+    range->end.nanoseconds = 0;
+    
+    // Check for fractional seconds
+    if (*end_ptr == '.') {
+        end_ptr++;
+        char frac_str[10] = {0};
+        int i = 0;
+        while (*end_ptr >= '0' && *end_ptr <= '9' && i < 9) {
+            frac_str[i++] = *end_ptr++;
+        }
+        
+        if (i > 0) {
+            long frac = atol(frac_str);
+            // Convert to nanoseconds
+            while (i < 9) {
+                frac *= 10;
+                i++;
+            }
+            range->start.nanoseconds = frac;
+            range->end.nanoseconds = frac;
+        }
+    }
 
-    if (time_str_len == 19) {
+    // If no modifier, return
+    if (*end_ptr == '\0') {
         return 0;
     }
 
-
-    char operand_char = time_str[19];
+    char operand_char = *end_ptr;
     if (!is_valid_operand(operand_char)) {
         return -1;
     }
+    
+    // Find the unit character at the end
     char offset_unit_char = time_str[time_str_len - 1];
     if (!is_valid_offset_unit(offset_unit_char)) {
         return -1;
     }
-    int offset_value = atoi(&time_str[20]);
+    
+    // Parse offset value
+    int offset_value = atoi(end_ptr + 1);
 
     time_t offset = 0;
     switch (offset_unit_char) {
@@ -65,12 +97,12 @@ int parse_search_range(const char *time_str, struct search_range_t *range) {
     }
 
     if (operand_char == '+') {
-        range->end += offset;
+        range->end.seconds += offset;
     } else if (operand_char == '-') {
-        range->start -= offset;
+        range->start.seconds -= offset;
     } else if (operand_char == '~') {
-        range->start -= offset;
-        range->end += offset;
+        range->start.seconds -= offset;
+        range->end.seconds += offset;
     } else {
         return -1; // Should not reach here due to earlier validation
     }

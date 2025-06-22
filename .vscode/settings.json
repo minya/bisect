@@ -10,5 +10,6 @@
     "bisect_test": true,
     "*.log": true,
     "*.gz": true,
-  }
+  },
+  "sonarlint.pathToCompileCommands": "${workspaceFolder}/compile_commands.json"
 }
