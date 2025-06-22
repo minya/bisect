@@ -13,3 +13,5 @@ test_bisect
 
 # visual studio files
 .vs/
+
+compile_commands.json
