@@ -16,7 +16,7 @@
 #endif
 
 regex_t regex_datetime;
-char *regex_pattern = "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?";
+char *regex_pattern = "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}([\\.,][0-9]{1,9})?";
 
 size_t date_str_len = 19; // "YYYY-MM-DD HH:MM:SS"
 
@@ -62,9 +62,9 @@ precise_time_t string_to_precise_time(const char *str) {
     }
     
     result.seconds = mktime(&tms);
-    
+
     // Check for fractional seconds
-    if (*end_ptr == '.') {
+    if (*end_ptr == '.' || *end_ptr == ',') {
         end_ptr++;
         char frac_str[10] = {0};  // max 9 digits for nanoseconds
         int i = 0;
