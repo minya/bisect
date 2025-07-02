@@ -50,7 +50,8 @@ char *precise_time_to_string(precise_time_t t) {
 
 precise_time_t string_to_precise_time(const char *str) {
     precise_time_t result = {0, 0};
-    struct tm tms;
+    struct tm tms = {0};
+    tms.tm_isdst = -1; // Let mktime determine if DST is in effect
     char *end_ptr;
     
     // Parse the base date/time
