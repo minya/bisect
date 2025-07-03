@@ -1,5 +1,5 @@
 CC = clang
-CFLAGS = -Wall -Wextra -Werror -O0 -std=c11
+CFLAGS = -Wall -Wextra -Werror -O3 -std=c17 -D_XOPEN_SOURCE=700
 LDFLAGS = 
 ifeq ($(OS), Windows_NT)
 LDFLAGS += -lregex
