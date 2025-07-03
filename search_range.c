@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "time_types.h"
+#include "precise_time.h"
 #include "search_range.h"
 #ifdef _WIN32
 #include "win.h"

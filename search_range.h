@@ -1,9 +1,8 @@
-
 #ifndef SEARCH_RANGE_H
 #define SEARCH_RANGE_H
 
 #include <time.h>
-#include "time_types.h"
+#include "precise_time.h"
 
 struct search_range_t {
     precise_time_t start;

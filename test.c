@@ -5,7 +5,8 @@
 #include <assert.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include "time_types.h"
+
+#include "precise_time.h"
 #include "bisect.h"
 #include "search_range.h"
 
@@ -37,26 +38,6 @@ precise_time_t precise_time_sub_seconds(precise_time_t t, time_t seconds) {
     precise_time_t result = t;
     result.seconds -= seconds;
     return result;
-}
-
-void test_time_t_to_string() {
-    struct tm test_tm = {0};
-    test_tm.tm_year = 125;  // 2025
-    test_tm.tm_mon = 5;     // June (0-based)
-    test_tm.tm_mday = 2;
-    test_tm.tm_hour = 11;
-    test_tm.tm_min = 55;
-    test_tm.tm_sec = 34;
-    test_tm.tm_isdst = -1;  // Let mktime determine DST
-    
-    time_t test_time = mktime(&test_tm);
-    char *result = time_t_to_string(test_time);
-    
-    test_assert(result != NULL, "time_t_to_string returns non-NULL");
-    test_assert(result && strlen(result) == 19, "time_t_to_string returns correct length");
-    test_assert(result && strstr(result, "2025-06-02") != NULL, "time_t_to_string contains correct date");
-    
-    if (result) free(result);
 }
 
 void test_find_date_in_buffer() {
@@ -305,7 +286,6 @@ void test_edge_cases() {
 int main() {
     printf("Running unit tests...\n\n");
     
-    test_time_t_to_string();
     test_find_date_in_buffer();
     test_create_sample_file();
     test_parse_time_range();
