@@ -1,27 +1,25 @@
+#include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdint.h>
+#include <string.h>
 
-#include "bisect.h"
 #include "search_range.h"
+
+
+static size_t _BLOCK_SIZE = 4096;
+
 void printout(int fd, size_t position, size_t stop, precise_time_t start_time, precise_time_t end_time);
 
-void bisect(const char *filename, struct search_range_t range) {
-    int fd = open(filename, O_RDONLY);
-    if (fd < 0) {
-        perror("Error opening file");
-        exit(EXIT_FAILURE);
-    }
-    size_t file_size = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
-
+size_t lower_bound(int fd, size_t file_size, struct search_range_t range, bool (*cmp)(precise_time_t, precise_time_t)) {
     size_t begin = 0;
     size_t end = file_size;
 
     while (begin < end) {
-        if (end - begin <= 4096) {
+        if (end - begin <= _BLOCK_SIZE) {
             break; // If the range is small enough, stop bisecting
         }
         size_t mid = (begin + end) / 2;
@@ -53,19 +51,39 @@ void bisect(const char *filename, struct search_range_t range) {
         
         precise_time_t found_time = string_to_precise_time(date_str);
 
-        if (precise_less(range.start, found_time)) {
+        if (cmp(range.start, found_time)) {
             end = mid;
         } else {
             begin = mid + 1;
         }
     }
+    return begin;
+}
+
+bool precise_not_greater(precise_time_t a, precise_time_t b) {
+    return !precise_greater(a, b);
+}
+
+void bisect(const char *filename, struct search_range_t range) {
+    int fd = open(filename, O_RDONLY);
+    if (fd < 0) {
+        perror("Error opening file");
+        exit(EXIT_FAILURE);
+    }
+    size_t file_size = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
+
+    size_t begin = lower_bound(fd, file_size, range, precise_less);
+    size_t end = lower_bound(fd, file_size, range, precise_not_greater);
+
+    printf("Found range (hex) from %zx to %zx\n", begin, end);
 
     if (begin >= file_size) {
         close(fd);
         return;
     }
 
-    printout(fd, begin, end, range.start, range.end);
+    printout(fd, begin, end + _BLOCK_SIZE, range.start, range.end);
     close(fd);
 }
 
@@ -73,13 +91,13 @@ void printout(int fd, size_t from, size_t to, precise_time_t start_time, precise
     lseek(fd, from, SEEK_SET);
     // Large enough buffer to read multiple lines.
     // Needs to be replaced by a list of buffers or become dynamic as we do not know how large the lines are.
-    const size_t BUFSIZE = 8192;
-    char buffer[BUFSIZE+1]; // + 1 for null terminator
+    const size_t _BUF_SIZE = 8192;
+    char buffer[_BUF_SIZE+1]; // + 1 for null terminator
     size_t remaining_bytes = 0;
     size_t pos_to_print_from = SIZE_MAX;
     while (true)
     {
-        if (from >= to + BUFSIZE) {
+        if (from >= to + _BUF_SIZE) {
             break; // Stop reading if we have reached the end position
         }
 

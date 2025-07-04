@@ -8,7 +8,6 @@
 #include <time.h>
 #include <regex.h>
 
-#include "precise_time.h"
 #include "search_range.h"
 
 #define PROGRAM_NAME "bisect"
