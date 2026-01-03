@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
 
     int opt;
     int verbose = 0;
-    char *time = NULL;
+    char *time_range_str = NULL;
     char *filename = NULL;
     
     static struct option long_options[] = {
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
                 print_version();
                 exit(EXIT_SUCCESS);
             case 't':
-                time = optarg;
+                time_range_str = optarg;
                 break;
             case 'V':
                 verbose = 1;
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
         }
     }
     
-    if (time == NULL) {
+    if (time_range_str == NULL) {
         fprintf(stderr, "Error: time argument required (-t or --time)\n");
         fprintf(stderr, "Try '%s --help' for more information.\n", argv[0]);
         exit(EXIT_FAILURE);
@@ -100,13 +100,13 @@ int main(int argc, char *argv[]) {
 
     if (verbose) {
         printf("Verbose mode enabled\n");
-        printf("Target time: %s\n", time);
+        printf("Target time: %s\n", time_range_str);
         printf("Processing file: %s\n", filename);
     }
 
     struct search_range_t range;
-    if (parse_search_range(time, &range) != 0) {
-        fprintf(stderr, "Error: invalid time format '%s'. Expected format: YYYY-MM-DD HH:MM:SS[+|-|~]<number><unit>\n", time);
+    if (parse_search_range(time_range_str, &range) != 0) {
+        fprintf(stderr, "Error: invalid time format '%s'. Expected format: YYYY-MM-DD HH:MM:SS[+|-|~]<number><unit>\n", time_range_str);
         exit(EXIT_FAILURE);
     }
     bisect(filename, range);

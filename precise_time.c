@@ -82,7 +82,6 @@ int find_date_in_buffer(const char *buffer) {
 
     reti = regexec(&regex_datetime, buffer, 1, pmatch, 0);
     if (reti == 0) {
-        /*printf("DEBUG (find_date_in_buffer): strlen = %zu (found at %lld)\n", strlen(buffer), pmatch[0].rm_so);*/
         return pmatch[0].rm_so;
     }
     return -1;
@@ -91,7 +90,6 @@ int find_date_in_buffer(const char *buffer) {
 // Extract date string from buffer and return its length
 int extract_date_string(const char *buffer, int offset, char *date_str, size_t max_len) {
     regmatch_t pmatch[1];
-    /*printf("DEBUG: strlen = %zu (offset was %d)\n", strlen(buffer + offset), offset);*/
     int reti = regexec(&regex_datetime, buffer + offset, 1, pmatch, 0);
     if (reti == 0 && pmatch[0].rm_so == 0) {
         int len = pmatch[0].rm_eo - pmatch[0].rm_so;
@@ -101,10 +99,6 @@ int extract_date_string(const char *buffer, int offset, char *date_str, size_t m
         return len;
     }
     return -1;
-}
-
-bool less(time_t a, time_t b) {
-    return a < b;
 }
 
 bool precise_less(precise_time_t a, precise_time_t b) {

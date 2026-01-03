@@ -1,4 +1,3 @@
-#include <_string.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -82,7 +81,6 @@ void bisect(const char *filename, struct search_range_t range) {
 }
 
 void printout(int fd, size_t from, struct search_range_t range) {
-    /*printf("printout at offset %zu\n", from);*/
     char buf[_BLOCK_SIZE+1];
     lseek(fd, from, SEEK_SET);
     size_t rd = read(fd, buf, _BLOCK_SIZE);
@@ -118,13 +116,11 @@ void printout(int fd, size_t from, struct search_range_t range) {
         date = string_to_precise_time(date_str);
     } while (precise_less(date, range.start));
 
-    /*printf("first date found at %d\n", dt_offset);*/
     if (dt_offset < 0)
         return;
 
     while (precise_less_equal(date, range.end)) {
         int new_dt_offset_rel = find_date_in_buffer(buf + dt_offset + date_len);
-        /*printf("new date found at %d rel %d abs\n", new_dt_offset_rel, new_dt_offset_rel + dt_offset + date_len);*/
         if (new_dt_offset_rel >= 0) {
             int new_dt_offset = new_dt_offset_rel + dt_offset + date_len;
             date_len = extract_date_string(buf, new_dt_offset, date_str, sizeof(date_str));
@@ -132,7 +128,6 @@ void printout(int fd, size_t from, struct search_range_t range) {
             write(STDOUT_FILENO, buf + dt_offset, new_dt_offset - dt_offset);
             dt_offset = new_dt_offset;
         } else {
-            /*printf("hello\n");*/
             size_t remainder_size = sizeof(buf) - 1 - dt_offset;
             memcpy(buf, buf + dt_offset, remainder_size);
             int rd = read(fd, buf + remainder_size, sizeof(buf) - remainder_size - 1);
