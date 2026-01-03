@@ -16,7 +16,7 @@ static size_t _BLOCK_SIZE = 8192;
 void printout(int fd, size_t from, struct search_range_t range);
 
 
-size_t lower_bound_block(int fd, size_t file_size, struct search_range_t range, bool (*cmp)(precise_time_t, precise_time_t)) {
+ssize_t lower_bound_block(int fd, size_t file_size, struct search_range_t range, bool (*cmp)(precise_time_t, precise_time_t)) {
     size_t n_blocks = file_size / _BLOCK_SIZE;
     size_t begin = 0;
     size_t end = n_blocks;
@@ -29,15 +29,13 @@ size_t lower_bound_block(int fd, size_t file_size, struct search_range_t range, 
         lseek(fd, mid * _BLOCK_SIZE, SEEK_SET);
         int bytes_read = read(fd, buffer, sizeof(buffer) - 1);
         if (bytes_read < 0) {
-            perror("Error reading file");
-            close(fd);
-            exit(EXIT_FAILURE);
+            return -1;
         }
 
         buffer[bytes_read] = '\0';
         int date_offset_in_buf = find_date_in_buffer(buffer);
         if (date_offset_in_buf < 0) {
-            exit(EXIT_FAILURE);
+            return -1;
         }
 
         int date_len = extract_date_string(buffer, date_offset_in_buf, date_str, sizeof(date_str));
@@ -60,24 +58,28 @@ size_t lower_bound_block(int fd, size_t file_size, struct search_range_t range, 
 }
 
 
-void bisect(const char *filename, struct search_range_t range) {
+int bisect(const char *filename, struct search_range_t range) {
     int fd = open(filename, O_RDONLY);
     if (fd < 0) {
-        perror("Error opening file");
-        exit(EXIT_FAILURE);
+        return -1;
     }
     size_t file_size = lseek(fd, 0, SEEK_END);
     lseek(fd, 0, SEEK_SET);
 
     size_t first_block_with_date = lower_bound_block(fd, file_size, range, precise_less);
+    if (first_block_with_date < 0) {
+        close(fd);
+        return -1;
+    }
 
     if (first_block_with_date * _BLOCK_SIZE >= file_size) {
         close(fd);
-        return;
+        return 0;
     }
 
     printout(fd, first_block_with_date * _BLOCK_SIZE, range);
     close(fd);
+    return 0;
 }
 
 void printout(int fd, size_t from, struct search_range_t range) {
