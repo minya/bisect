@@ -1,7 +1,6 @@
 #include "precise_time.h"
-#include <regex.h>
+#include <ctype.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -9,8 +8,21 @@
 #include "win.h"
 #endif
 
-regex_t regex_datetime;
-char *regex_pattern = "[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}([\\.,][0-9]{1,9})?";
+static int is_timestamp_at(const char *buf, size_t len, size_t i) {
+    if (i + 19 > len) return 0;
+
+    if (buf[i+4] != '-' || buf[i+7] != '-' || buf[i+10] != ' ' ||
+        buf[i+13] != ':' || buf[i+16] != ':')
+        return 0;
+
+    return isdigit((unsigned char)buf[i])    && isdigit((unsigned char)buf[i+1])  &&
+           isdigit((unsigned char)buf[i+2])  && isdigit((unsigned char)buf[i+3])  &&
+           isdigit((unsigned char)buf[i+5])  && isdigit((unsigned char)buf[i+6])  &&
+           isdigit((unsigned char)buf[i+8])  && isdigit((unsigned char)buf[i+9])  &&
+           isdigit((unsigned char)buf[i+11]) && isdigit((unsigned char)buf[i+12]) &&
+           isdigit((unsigned char)buf[i+14]) && isdigit((unsigned char)buf[i+15]) &&
+           isdigit((unsigned char)buf[i+17]) && isdigit((unsigned char)buf[i+18]);
+}
 
 
 char *precise_time_to_string(precise_time_t t) {
@@ -77,28 +89,38 @@ time_t string_to_time_t(const char *str) {
 }
 
 int find_date_in_buffer(const char *buffer) {
-    int reti;
-    regmatch_t pmatch[1];
-
-    reti = regexec(&regex_datetime, buffer, 1, pmatch, 0);
-    if (reti == 0) {
-        return pmatch[0].rm_so;
+    size_t len = strlen(buffer);
+    for (size_t i = 0; i + 19 <= len; i++) {
+        if (is_timestamp_at(buffer, len, i)) {
+            return (int)i;
+        }
     }
     return -1;
 }
 
 // Extract date string from buffer and return its length
 int extract_date_string(const char *buffer, int offset, char *date_str, size_t max_len) {
-    regmatch_t pmatch[1];
-    int reti = regexec(&regex_datetime, buffer + offset, 1, pmatch, 0);
-    if (reti == 0 && pmatch[0].rm_so == 0) {
-        int len = pmatch[0].rm_eo - pmatch[0].rm_so;
-        if (len >= (int)max_len) len = (int)max_len - 1;
-        strncpy(date_str, buffer + offset, len);
-        date_str[len] = '\0';
-        return len;
+    size_t len = strlen(buffer);
+    if (!is_timestamp_at(buffer, len, (size_t)offset)) {
+        return -1;
     }
-    return -1;
+
+    int ts_len = 19;
+
+    size_t pos = (size_t)offset + 19;
+    if (pos < len && (buffer[pos] == '.' || buffer[pos] == ',')) {
+        pos++;
+        while (pos < len && isdigit((unsigned char)buffer[pos]) && ts_len < 29) {
+            ts_len++;
+            pos++;
+        }
+        ts_len++; // include the . or ,
+    }
+
+    if ((size_t)ts_len >= max_len) ts_len = (int)max_len - 1;
+    strncpy(date_str, buffer + offset, ts_len);
+    date_str[ts_len] = '\0';
+    return ts_len;
 }
 
 bool precise_less(precise_time_t a, precise_time_t b) {

@@ -6,7 +6,6 @@
 #include <string.h>
 #include <stdbool.h>
 #include <time.h>
-#include <regex.h>
 
 #include "search_range.h"
 
@@ -14,9 +13,6 @@
 #define VERSION "1.0.0"
 #define MAX_PATH_LENGTH 1024
 #define MAX_BUFFER_SIZE 4096
-
-extern regex_t regex_datetime;
-extern char *regex_pattern;
 
 void bisect(const char *filename, struct search_range_t range);
 void print_usage(const char *program_name);

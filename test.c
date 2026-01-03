@@ -3,8 +3,17 @@
 #include <string.h>
 #include <time.h>
 #include <assert.h>
-#include <unistd.h>
 #include <fcntl.h>
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <io.h>
+#define access _access
+#define unlink _unlink
+#define F_OK 0
+#define R_OK 4
+#else
+#include <unistd.h>
+#endif
 
 #include "precise_time.h"
 #include "bisect.h"
@@ -40,33 +49,26 @@ precise_time_t precise_time_sub_seconds(precise_time_t t, time_t seconds) {
     return result;
 }
 
-void test_find_date_in_buffer() {
-    if (regcomp(&regex_datetime, regex_pattern, REG_EXTENDED)) {
-        printf("Could not compile regex for tests\n");
-        return;
-    }
-    
+void test_find_date_in_buffer(void) {
     // Test with valid date
     const char *buffer1 = "2025-06-02 11:55:34 Some log message";
     int result1 = find_date_in_buffer(buffer1);
     test_assert(result1 == 0, "find_date_in_buffer finds valid date at position 0");
-    
+
     // Test with no date
     const char *buffer2 = "No date in this buffer";
     int result2 = find_date_in_buffer(buffer2);
     test_assert(result2 == -1, "find_date_in_buffer returns -1 for no date");
-    
+
     // Test with multiple dates (should find first one)
     const char *buffer3 = "2025-06-02 11:55:34 First date 2025-06-02 12:00:00 Second date";
     int result3 = find_date_in_buffer(buffer3);
     test_assert(result3 == 0, "find_date_in_buffer finds first date at position 0");
-    
+
     // Test with date not at beginning
     const char *buffer4 = "Some text 2025-06-02 11:55:34 Some log message";
     int result4 = find_date_in_buffer(buffer4);
     test_assert(result4 == 10, "find_date_in_buffer finds date at correct position");
-    
-    regfree(&regex_datetime);
 }
 
 void test_create_sample_file() {
@@ -205,12 +207,7 @@ void test_fractional_search_range() {
     test_assert(range.start.seconds == range.end.seconds - 2, "parse_search_range applies ~ operator correctly");
 }
 
-void test_date_regex_with_fractional() {
-    if (regcomp(&regex_datetime, regex_pattern, REG_EXTENDED)) {
-        printf("Could not compile regex for fractional tests\n");
-        return;
-    }
-    
+void test_find_date_with_fractional(void) {
     // Test various fractional formats
     const char *valid_dates[] = {
         "2025-06-02 11:55:34",
@@ -219,14 +216,14 @@ void test_date_regex_with_fractional() {
         "2025-06-02 11:55:34.123456789",
         "Some text 2025-06-02 11:55:34.500 more text"
     };
-    
+
     for (int i = 0; i < 5; i++) {
         int pos = find_date_in_buffer(valid_dates[i]);
         char msg[100];
         snprintf(msg, sizeof(msg), "find_date_in_buffer finds date in '%s'", valid_dates[i]);
         test_assert(pos >= 0, msg);
     }
-    
+
     // Test date extraction
     char date_str[40];
     int len = extract_date_string("2025-06-02 11:55:34.123456789 log entry", 0, date_str, sizeof(date_str));
@@ -291,7 +288,7 @@ int main() {
     test_parse_time_range();
     test_precise_time_parsing();
     test_fractional_search_range();
-    test_date_regex_with_fractional();
+    test_find_date_with_fractional();
     test_edge_cases();
     
     printf("\n=== Test Results ===\n");

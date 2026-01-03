@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <regex.h>
 #include "bisect.h"
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -33,11 +32,6 @@ void print_version(void) {
 }
 
 int main(int argc, char *argv[]) {
-    if (regcomp(&regex_datetime, regex_pattern, REG_EXTENDED)) {
-        fprintf(stderr, "Could not compile regex\n");
-        return EXIT_FAILURE;
-    }
-
     int verbose = 0;
     char *time_range_str = NULL;
     char *filename = NULL;
