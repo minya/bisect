@@ -2,13 +2,18 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <time.h>
 #include <regex.h>
 #include "bisect.h"
 
 #if defined(_WIN32) || defined(_WIN64)
+#include <io.h>
+#define access _access
+#define F_OK 0
+#define R_OK 4
 #include "win.h"
+#else
+#include <unistd.h>
 #endif
 
 void print_usage(const char *program_name) {
